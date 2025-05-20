@@ -32,7 +32,7 @@ export default function GrassEstimator() {
     setLoading(true);
 
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    files.forEach(file => formData.append('file', file)); // ✅ match backend
     if (objectName) formData.append('object_name', objectName);
     if (knownHeight) formData.append('known_height', knownHeight);
 
