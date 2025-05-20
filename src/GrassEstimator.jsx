@@ -38,7 +38,13 @@ export default function GrassEstimator() {
 
     try {
       const res = await axios.post('https://grass-area-api.onrender.com/upload', formData);
-      setResult(res.data.result);
+      const raw = res.data.result;
+      const lines = raw.split('\n');
+      setResult({
+        area: lines[0]?.replace(/^1\.\s*/, '').trim(),
+        length: lines[1]?.replace(/^2\.\s*/, '').trim(),
+        condition: lines[2]?.replace(/^3\.\s*/, '').trim()
+      });
     } catch (err) {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -124,16 +130,12 @@ export default function GrassEstimator() {
             >
               <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4 animate-pulse max-w-sm w-full">
                 <p className="text-lg font-semibold">🧠 Scanning your property...</p>
-                
                 <div className="flex justify-center items-center space-x-2">
                   <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce" />
                   <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce [animation-delay:.1s]" />
                   <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce [animation-delay:.2s]" />
                 </div>
-
-                <p className="text-sm text-gray-500 italic">
-                  Cutting grass, detecting zones, analysing overhead layout...
-                </p>
+                <p className="text-sm text-gray-500 italic">Detecting grass zones, estimating size, evaluating condition…</p>
               </div>
             </motion.div>
           )}
@@ -146,10 +148,59 @@ export default function GrassEstimator() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-3xl shadow p-6 text-center"
+              className="bg-white rounded-3xl shadow p-6 space-y-6 text-left"
             >
-              <p className="text-sm text-gray-500 mb-1">Estimated Result</p>
-              <p className="text-xl font-semibold text-[#2c3e50]">{result}</p>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Estimated Grass Area</p>
+                <p className="text-xl font-semibold text-[#2c3e50]">{result.area}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Grass Length</p>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  {[
+                    "Recently mowed (under 4cm)",
+                    "Light growth (4–8cm)",
+                    "Moderately overgrown (8–15cm)",
+                    "Heavily overgrown (15–30cm)",
+                    "Very overgrown / Wild (over 30cm)"
+                  ].map((item) => (
+                    <span
+                      key={item}
+                      className={`px-3 py-1 rounded-full border ${
+                        result.length === item
+                          ? "bg-green-600 text-white font-semibold"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Grass Condition</p>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  {[
+                    "Healthy and green",
+                    "Patchy and dry",
+                    "Mostly weeds",
+                    "Mixed with debris (sticks, rocks, rubbish)"
+                  ].map((item) => (
+                    <span
+                      key={item}
+                      className={`px-3 py-1 rounded-full border ${
+                        result.condition === item
+                          ? "bg-blue-600 text-white font-semibold"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           )}
 
