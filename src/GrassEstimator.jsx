@@ -36,19 +36,12 @@ export default function GrassEstimator() {
     if (objectName) formData.append('object_name', objectName);
     if (knownHeight) formData.append('known_height', knownHeight);
 
-    // Debug log for FormData
-  for (let pair of formData.entries()) {
-  console.log(pair[0], pair[1]);
-  }
     try {
-      setTimeout(async () => {
-        const res = await axios.post('https://grass-area-api.onrender.com/upload', formData);
-        setResult(res.data.result);
-        setScanning(false);
-        setLoading(false);
-      }, 3000); // Simulated scanning time
+      const res = await axios.post('https://grass-area-api.onrender.com/upload', formData);
+      setResult(res.data.result);
     } catch (err) {
       setError('Something went wrong. Please try again.');
+    } finally {
       setScanning(false);
       setLoading(false);
     }
@@ -120,7 +113,7 @@ export default function GrassEstimator() {
           </motion.button>
         </form>
 
-        {/* Scanning Animation */}
+        {/* 🔁 AI Scanning Animation */}
         <AnimatePresence>
           {scanning && (
             <motion.div
@@ -129,23 +122,24 @@ export default function GrassEstimator() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50"
             >
-              <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4">
-                <p className="text-lg font-semibold">🧠 Analysing your property...</p>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 2.5 }}
-                    className="bg-[#4b6584] h-3 rounded-full"
-                  />
+              <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4 animate-pulse max-w-sm w-full">
+                <p className="text-lg font-semibold">🧠 Scanning your property...</p>
+                
+                <div className="flex justify-center items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce" />
+                  <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce [animation-delay:.1s]" />
+                  <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce [animation-delay:.2s]" />
                 </div>
-                <p className="text-sm text-gray-500">Running AI scan, detecting edges, identifying lawn zones...</p>
+
+                <p className="text-sm text-gray-500 italic">
+                  Cutting grass, detecting zones, analysing overhead layout...
+                </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Result Display */}
+        {/* ✅ Result Display */}
         <AnimatePresence>
           {result && (
             <motion.div
