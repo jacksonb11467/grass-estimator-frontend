@@ -7,11 +7,21 @@ export default function GrassEstimator() {
   const [objectName, setObjectName] = useState('');
   const [knownHeight, setKnownHeight] = useState('');
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [scanning, setScanning] = useState(false);
+  const [pricePerM2, setPricePerM2] = useState(null);
+  const [calculatedPrice, setCalculatedPrice] = useState(null);
 
   const maxFiles = 3;
+
+  useEffect(() => {
+    // Fetch live pricing from pricing.json
+    fetch('/pricing.json')
+      .then(res => res.json())
+      .then(data => setPricePerM2(data.pricePerM2))
+      .catch(err => console.error("Failed to fetch pricing:", err));
+  }, []);
 
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files).slice(0, maxFiles);
@@ -22,6 +32,7 @@ export default function GrassEstimator() {
     e.preventDefault();
     setResult(null);
     setError(null);
+    setCalculatedPrice(null);
 
     if (files.length === 0) {
       setError('Please upload at least one photo.');
@@ -40,11 +51,22 @@ export default function GrassEstimator() {
       const res = await axios.post('https://grass-area-api.onrender.com/upload', formData);
       const raw = res.data.result;
       const lines = raw.split('\n');
-      setResult({
-        area: lines[0]?.replace(/^1\./, '').trim(),
-        length: lines[1]?.replace(/^2\./, '').trim(),
-        condition: lines[2]?.replace(/^3\./, '').trim()
-      });
+
+      const areaText = lines[0]?.replace(/^1\./, '').trim();
+      const length = lines[1]?.replace(/^2\./, '').trim();
+      const condition = lines[2]?.replace(/^3\./, '').trim();
+
+      // Extract numeric value from area
+      const areaMatch = areaText.match(/([\d.]+)/);
+      const areaM2 = areaMatch ? parseFloat(areaMatch[1]) : null;
+
+      setResult({ area: areaText, length, condition });
+
+      if (areaM2 && pricePerM2) {
+        const totalPrice = (areaM2 * pricePerM2).toFixed(2);
+        setCalculatedPrice(totalPrice);
+      }
+
     } catch (err) {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -63,11 +85,7 @@ export default function GrassEstimator() {
   return (
     <div className="min-h-screen bg-[#f4f4f5] text-[#2c3e50] px-4 py-10 flex items-center justify-center">
       <div className="w-full max-w-3xl space-y-10 text-center">
-        <img
-          src="/companylogo.png"
-          alt="Company Logo"
-          className="w-40 mx-auto mb-4"
-        />
+        <img src="/companylogo.png" alt="Company Logo" className="w-40 mx-auto mb-4" />
 
         {!result && (
           <>
@@ -147,7 +165,7 @@ export default function GrassEstimator() {
               className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50"
             >
               <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4 max-w-sm w-full">
-                <p className="text-lg font-semibold">Analysing terrain... calibrating blades...</p>
+                <p className="text-lg font-semibold">🌀 Analysing terrain... calibrating blades...</p>
                 <div className="flex justify-center items-center">
                   <img src="/lawnmower.gif" alt="Loading..." className="w-16 h-16 animate-spin" />
                 </div>
@@ -166,6 +184,12 @@ export default function GrassEstimator() {
               className="bg-white rounded-3xl shadow p-6 space-y-6 text-left"
             >
               <div className="text-2xl font-bold">📏 {result.area}</div>
+
+              {calculatedPrice && (
+                <div className="text-lg font-semibold text-green-700">
+                  💰 Estimated cost: ${calculatedPrice}
+                </div>
+              )}
 
               <div>
                 <p className="text-sm text-gray-500 mb-1">🌿 Grass Length</p>
