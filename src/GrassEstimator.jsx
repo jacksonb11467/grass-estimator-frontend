@@ -7,21 +7,12 @@ export default function GrassEstimator() {
   const [objectName, setObjectName] = useState('');
   const [knownHeight, setKnownHeight] = useState('');
   const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [pricePerM2, setPricePerM2] = useState(null);
+  const [scanning, setScanning] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState(null);
 
   const maxFiles = 3;
-
-  useEffect(() => {
-    // Fetch live pricing from pricing.json
-    fetch('/pricing.json')
-      .then(res => res.json())
-      .then(data => setPricePerM2(data.pricePerM2))
-      .catch(err => console.error("Failed to fetch pricing:", err));
-  }, []);
 
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files).slice(0, maxFiles);
@@ -51,23 +42,43 @@ export default function GrassEstimator() {
       const res = await axios.post('https://grass-area-api.onrender.com/upload', formData);
       const raw = res.data.result;
       const lines = raw.split('\n');
+      const parsedResult = {
+        area: lines[0]?.replace(/^1\./, '').trim(),
+        length: lines[1]?.replace(/^2\./, '').trim(),
+        condition: lines[2]?.replace(/^3\./, '').trim()
+      };
+      setResult(parsedResult);
 
-      const areaText = lines[0]?.replace(/^1\./, '').trim();
-      const length = lines[1]?.replace(/^2\./, '').trim();
-      const condition = lines[2]?.replace(/^3\./, '').trim();
+      // Fetch price and calculate
+      const pricing = await axios.get('/pricing.json');
+      const pricePerM2 = pricing.data.pricePerM2;
+      const match = parsedResult.area.match(/(\d+(\.\d+)?)/);
+      const m2 = match ? parseFloat(match[1]) : 0;
+      const finalPrice = (pricePerM2 * m2).toFixed(2);
+      setCalculatedPrice(finalPrice);
 
-      // Extract numeric value from area
-      const areaMatch = areaText.match(/([\d.]+)/);
-      const areaM2 = areaMatch ? parseFloat(areaMatch[1]) : null;
-
-      setResult({ area: areaText, length, condition });
-
-      if (areaM2 && pricePerM2) {
-        const totalPrice = (areaM2 * pricePerM2).toFixed(2);
-        setCalculatedPrice(totalPrice);
-      }
-
+      // Send email via Formspree
+      const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
+      await fetch('https://formspree.io/f/mldbvkep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userInfo.name || '',
+          email: userInfo.email || '',
+          message: `
+            New quote request:
+            Name: ${userInfo.name || ''}
+            Email: ${userInfo.email || ''}
+            Address: ${userInfo.address || ''}
+            Estimated Area: ${parsedResult.area}
+            Grass Length: ${parsedResult.length}
+            Grass Condition: ${parsedResult.condition}
+            Price: $${finalPrice}
+          `
+        })
+      });
     } catch (err) {
+      console.error(err);
       setError('Something went wrong. Please try again.');
     } finally {
       setScanning(false);
@@ -109,18 +120,6 @@ export default function GrassEstimator() {
                   onChange={handleFileChange}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 file:bg-[#1e2a36] file:text-white file:rounded-md"
                 />
-                {files.length > 0 && (
-                  <div className="flex gap-2 mt-3">
-                    {files.map((file, idx) => (
-                      <img
-                        key={idx}
-                        src={URL.createObjectURL(file)}
-                        alt={`upload-${idx}`}
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Known Object (optional)</label>
@@ -165,7 +164,7 @@ export default function GrassEstimator() {
               className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50"
             >
               <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4 max-w-sm w-full">
-                <p className="text-lg font-semibold">🌀 Analysing terrain... calibrating blades...</p>
+                <p className="text-lg font-semibold">🌀 Analysing terrain… calibrating blades…</p>
                 <div className="flex justify-center items-center">
                   <img src="/lawnmower.gif" alt="Loading..." className="w-16 h-16 animate-spin" />
                 </div>
@@ -184,12 +183,6 @@ export default function GrassEstimator() {
               className="bg-white rounded-3xl shadow p-6 space-y-6 text-left"
             >
               <div className="text-2xl font-bold">📏 {result.area}</div>
-
-              {calculatedPrice && (
-                <div className="text-lg font-semibold text-green-700">
-                  💰 Estimated cost: ${calculatedPrice}
-                </div>
-              )}
 
               <div>
                 <p className="text-sm text-gray-500 mb-1">🌿 Grass Length</p>
@@ -218,6 +211,18 @@ export default function GrassEstimator() {
                   ))}
                 </div>
               </div>
+
+              {calculatedPrice && (
+                <div className="bg-[#e9f8ec] p-6 rounded-xl shadow text-left space-y-3">
+                  <h2 className="text-xl font-bold text-green-800">💰 Estimated Price</h2>
+                  <p className="text-2xl text-green-700 font-semibold">${calculatedPrice}</p>
+                  <button
+                    className="bg-[#2c3e50] text-white px-6 py-3 rounded-lg mt-4 hover:bg-[#1e2a36] transition"
+                  >
+                    Book in Service
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
 
