@@ -71,8 +71,14 @@ export default function HomePage() {
       className="min-h-screen bg-[#f9f9f9] text-[#2c3e50] px-4 py-10 flex items-center justify-center"
     >
       <div className="w-full max-w-xl space-y-8 bg-white p-6 rounded-2xl shadow-md">
-        <h1 className="text-3xl font-semibold text-center mb-2">Welcome to the Grass Area Estimator</h1>
-        <p className="text-center text-gray-500 text-sm">Start by entering your details below</p>
+        <img
+          src="/companylogo.png"
+          alt="Company Logo"
+          className="w-36 mx-auto"
+        />
+
+        <h1 className="text-3xl font-semibold text-center mb-1">Insta Quoting Tool</h1>
+        <p className="text-center text-gray-500 text-sm mb-4">Start by entering your details below</p>
 
         <div className="space-y-4">
           <div>
@@ -118,23 +124,22 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 pt-4">
+        <div className="pt-6 text-center">
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleSubmit('/upload')}
-            className="flex-1 bg-[#2c3e50] text-white py-3 rounded-lg font-medium hover:bg-[#1e2a36] transition"
+            className="w-full bg-[#2c3e50] text-white py-3 rounded-lg font-medium hover:bg-[#1e2a36] transition"
           >
             I have access to photos
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
+
+          <p
             onClick={() => handleSubmit('/manual')}
-            className="flex-1 bg-[#f4c542] text-black py-3 rounded-lg font-medium hover:bg-[#e3b528] transition"
+            className="mt-3 text-sm italic text-gray-500 hover:underline cursor-pointer"
           >
             I don’t have photos
-          </motion.button>
+          </p>
         </div>
       </div>
     </motion.div>

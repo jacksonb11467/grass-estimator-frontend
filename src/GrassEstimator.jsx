@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,7 +32,7 @@ export default function GrassEstimator() {
     setLoading(true);
 
     const formData = new FormData();
-    files.forEach(file => formData.append('file', file)); // ✅ match backend
+    files.forEach(file => formData.append('file', file));
     if (objectName) formData.append('object_name', objectName);
     if (knownHeight) formData.append('known_height', knownHeight);
 
@@ -41,9 +41,9 @@ export default function GrassEstimator() {
       const raw = res.data.result;
       const lines = raw.split('\n');
       setResult({
-        area: lines[0]?.replace(/^1\.\s*/, '').trim(),
-        length: lines[1]?.replace(/^2\.\s*/, '').trim(),
-        condition: lines[2]?.replace(/^3\.\s*/, '').trim()
+        area: lines[0]?.replace(/^1\./, '').trim(),
+        length: lines[1]?.replace(/^2\./, '').trim(),
+        condition: lines[2]?.replace(/^3\./, '').trim()
       });
     } catch (err) {
       setError('Something went wrong. Please try again.');
@@ -53,73 +53,91 @@ export default function GrassEstimator() {
     }
   };
 
+  useEffect(() => {
+    if (result) {
+      const el = document.getElementById('result-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [result]);
+
   return (
     <div className="min-h-screen bg-[#f4f4f5] text-[#2c3e50] px-4 py-10 flex items-center justify-center">
       <div className="w-full max-w-3xl space-y-10 text-center">
-        <header>
-          <h1 className="text-5xl font-semibold tracking-tight mb-2">Grass Area Estimator</h1>
-          <p className="text-gray-500 text-lg">Upload up to 3 photos to estimate the grass area in square metres</p>
-        </header>
+        <img
+          src="/companylogo.png"
+          alt="Company Logo"
+          className="w-40 mx-auto mb-4"
+        />
 
-        <div className="text-left bg-white p-6 rounded-2xl shadow text-sm text-gray-600">
-          <p className="font-medium mb-2">📸 Photo Guidelines:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Stand at one corner of the garden and capture as much as possible.</li>
-            <li>Take one photo from the back corner, one from the front, and one overhead (if safe).</li>
-            <li>Try to avoid shadows or dark lighting — clear daytime photos work best.</li>
-            <li>Make sure grass edges are visible (fences, garden beds, etc.).</li>
-          </ul>
-        </div>
+        {!result && (
+          <>
+            <div className="text-left bg-white p-6 rounded-2xl shadow text-sm text-gray-600">
+              <p className="font-medium mb-2">📸 Photo Guidelines:</p>
+              <p className="text-gray-500 text-sm mb-2">Upload up to 3 photos to estimate the grass area in square metres.</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Capture wide shots from front, back, and above if possible.</li>
+                <li>Avoid shadows or poor lighting.</li>
+                <li>Ensure edges like fences or garden beds are visible.</li>
+              </ul>
+            </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-md p-8 space-y-6 text-left">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Upload Images (max {maxFiles})</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileChange}
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 file:bg-[#1e2a36] file:text-white file:rounded-md"
-            />
-            {files.length > 0 && (
-              <div className="mt-2 text-sm text-gray-600">
-                Selected: {files.map((f) => f.name).join(', ')}
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-md p-8 space-y-6 text-left">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Images (max {maxFiles})</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 file:bg-[#1e2a36] file:text-white file:rounded-md"
+                />
+                {files.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {files.map((file, idx) => (
+                      <img
+                        key={idx}
+                        src={URL.createObjectURL(file)}
+                        alt={`upload-${idx}`}
+                        className="w-20 h-20 object-cover rounded-lg border"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Known Object (optional)</label>
-            <input
-              type="text"
-              value={objectName}
-              onChange={(e) => setObjectName(e.target.value)}
-              placeholder="e.g. fence"
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Object Height in Metres (optional)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={knownHeight}
-              onChange={(e) => setKnownHeight(e.target.value)}
-              placeholder="e.g. 1.85"
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 placeholder:text-gray-400"
-            />
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-[#2c3e50] to-[#4b6584] text-white py-3 rounded-xl font-semibold tracking-wide shadow hover:shadow-lg transition duration-200"
-          >
-            {loading ? 'Analysing...' : 'Estimate Area'}
-          </motion.button>
-        </form>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Known Object (optional)</label>
+                <input
+                  type="text"
+                  value={objectName}
+                  onChange={(e) => setObjectName(e.target.value)}
+                  placeholder="e.g. fence"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Object Height in Metres (optional)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={knownHeight}
+                  onChange={(e) => setKnownHeight(e.target.value)}
+                  placeholder="e.g. 1.85"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 placeholder:text-gray-400"
+                />
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-[#2c3e50] to-[#4b6584] text-white py-3 rounded-xl font-semibold tracking-wide shadow hover:shadow-lg transition duration-200"
+              >
+                {loading ? 'Analysing...' : 'Proceed'}
+              </motion.button>
+            </form>
+          </>
+        )}
 
-        {/* 🔁 AI Scanning Animation */}
         <AnimatePresence>
           {scanning && (
             <motion.div
@@ -128,50 +146,34 @@ export default function GrassEstimator() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50"
             >
-              <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4 animate-pulse max-w-sm w-full">
-                <p className="text-lg font-semibold">🧠 Scanning your property...</p>
-                <div className="flex justify-center items-center space-x-2">
-                  <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce" />
-                  <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce [animation-delay:.1s]" />
-                  <div className="w-4 h-4 rounded-full bg-[#4b6584] animate-bounce [animation-delay:.2s]" />
+              <div className="bg-white rounded-xl p-6 shadow-lg text-center space-y-4 max-w-sm w-full">
+                <p className="text-lg font-semibold">Analysing terrain... calibrating blades...</p>
+                <div className="flex justify-center items-center">
+                  <img src="/lawnmower.gif" alt="Loading..." className="w-16 h-16 animate-spin" />
                 </div>
-                <p className="text-sm text-gray-500 italic">Detecting grass zones, estimating size, evaluating condition…</p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ✅ Result Display */}
         <AnimatePresence>
           {result && (
             <motion.div
+              id="result-section"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               className="bg-white rounded-3xl shadow p-6 space-y-6 text-left"
             >
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Estimated Grass Area</p>
-                <p className="text-xl font-semibold text-[#2c3e50]">{result.area}</p>
-              </div>
+              <div className="text-2xl font-bold">📏 {result.area}</div>
 
               <div>
-                <p className="text-sm text-gray-500 mb-1">Grass Length</p>
+                <p className="text-sm text-gray-500 mb-1">🌿 Grass Length</p>
                 <div className="flex flex-wrap gap-2 text-sm">
-                  {[
-                    "Recently mowed (under 4cm)",
-                    "Light growth (4–8cm)",
-                    "Moderately overgrown (8–15cm)",
-                    "Heavily overgrown (15–30cm)",
-                    "Very overgrown / Wild (over 30cm)"
-                  ].map((item) => (
+                  {["Recently mowed (under 4cm)", "Light growth (4–8cm)", "Moderately overgrown (8–15cm)", "Heavily overgrown (15–30cm)", "Very overgrown / Wild (over 30cm)"].map((item) => (
                     <span
                       key={item}
-                      className={`px-3 py-1 rounded-full border ${
-                        result.length === item
-                          ? "bg-green-600 text-white font-semibold"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
+                      className={`px-3 py-1 rounded-full border ${result.length === item ? "bg-green-600 text-white font-semibold" : "bg-gray-100 text-gray-600"}`}
                     >
                       {item}
                     </span>
@@ -180,21 +182,12 @@ export default function GrassEstimator() {
               </div>
 
               <div>
-                <p className="text-sm text-gray-500 mb-1">Grass Condition</p>
+                <p className="text-sm text-gray-500 mb-1">🌱 Grass Condition</p>
                 <div className="flex flex-wrap gap-2 text-sm">
-                  {[
-                    "Healthy and green",
-                    "Patchy and dry",
-                    "Mostly weeds",
-                    "Mixed with debris (sticks, rocks, rubbish)"
-                  ].map((item) => (
+                  {["Healthy and green", "Patchy and dry", "Mostly weeds", "Mixed with debris (sticks, rocks, rubbish)"].map((item) => (
                     <span
                       key={item}
-                      className={`px-3 py-1 rounded-full border ${
-                        result.condition === item
-                          ? "bg-blue-600 text-white font-semibold"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
+                      className={`px-3 py-1 rounded-full border ${result.condition === item ? "bg-blue-600 text-white font-semibold" : "bg-gray-100 text-gray-600"}`}
                     >
                       {item}
                     </span>
