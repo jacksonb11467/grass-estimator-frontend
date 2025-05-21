@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import emailjs from '@emailjs/browser';
 
 export default function GrassEstimator() {
   const [files, setFiles] = useState([]);
@@ -23,7 +24,6 @@ export default function GrassEstimator() {
     e.preventDefault();
     setResult(null);
     setError(null);
-    setCalculatedPrice(null);
 
     if (files.length === 0) {
       setError('Please upload at least one photo.');
@@ -49,7 +49,6 @@ export default function GrassEstimator() {
       };
       setResult(parsedResult);
 
-      // Fetch price and calculate
       const pricing = await axios.get('/pricing.json');
       const pricePerM2 = pricing.data.pricePerM2;
       const match = parsedResult.area.match(/(\d+(\.\d+)?)/);
@@ -57,33 +56,36 @@ export default function GrassEstimator() {
       const finalPrice = (pricePerM2 * m2).toFixed(2);
       setCalculatedPrice(finalPrice);
 
-      // Send email via Formspree
+      // Send confirmation email
       const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
-      await fetch('https://formspree.io/f/mldbvkep', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await emailjs.send(
+        'service_1a5fp9c',
+        'template_r9nzzqs',
+        {
           name: userInfo.name || '',
           email: userInfo.email || '',
-          message: `
-            New quote request:
-            Name: ${userInfo.name || ''}
-            Email: ${userInfo.email || ''}
-            Address: ${userInfo.address || ''}
-            Estimated Area: ${parsedResult.area}
-            Grass Length: ${parsedResult.length}
-            Grass Condition: ${parsedResult.condition}
-            Price: $${finalPrice}
-          `
-        })
-      });
+          area: parsedResult.area,
+          length: parsedResult.length,
+          condition: parsedResult.condition,
+          price: finalPrice
+        },
+        'HN65SDSs7oC9UNIpI'
+      );
     } catch (err) {
-      console.error(err);
       setError('Something went wrong. Please try again.');
     } finally {
       setScanning(false);
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFiles([]);
+    setObjectName('');
+    setKnownHeight('');
+    setResult(null);
+    setError(null);
+    setCalculatedPrice(null);
   };
 
   useEffect(() => {
@@ -96,7 +98,11 @@ export default function GrassEstimator() {
   return (
     <div className="min-h-screen bg-[#f4f4f5] text-[#2c3e50] px-4 py-10 flex items-center justify-center">
       <div className="w-full max-w-3xl space-y-10 text-center">
-        <img src="/companylogo.png" alt="Company Logo" className="w-40 mx-auto mb-4" />
+        <img
+          src="/companylogo.png"
+          alt="Company Logo"
+          className="w-40 mx-auto mb-4"
+        />
 
         {!result && (
           <>
@@ -120,6 +126,18 @@ export default function GrassEstimator() {
                   onChange={handleFileChange}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 file:bg-[#1e2a36] file:text-white file:rounded-md"
                 />
+                {files.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {files.map((file, idx) => (
+                      <img
+                        key={idx}
+                        src={URL.createObjectURL(file)}
+                        alt={`upload-${idx}`}
+                        className="w-20 h-20 object-cover rounded-lg border"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Known Object (optional)</label>
@@ -218,6 +236,7 @@ export default function GrassEstimator() {
                   <p className="text-2xl text-green-700 font-semibold">${calculatedPrice}</p>
                   <button
                     className="bg-[#2c3e50] text-white px-6 py-3 rounded-lg mt-4 hover:bg-[#1e2a36] transition"
+                    onClick={() => console.log('Booking clicked')}
                   >
                     Book in Service
                   </button>
